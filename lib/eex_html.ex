@@ -230,37 +230,4 @@ defmodule EExHTML do
   defp to_iodata(<<>>, skip, original, acc, len) do
     [acc | binary_part(original, skip, len)]
   end
-
-  @doc """
-  Safety inject server variables into a pages JavaScript.
-  """
-  case Code.ensure_loaded(Jason) do
-    {:module, _} ->
-      def javascript_variables(variables) do
-        variables = Enum.into(variables, %{})
-
-        json = Jason.encode!(variables)
-        # NOTE returned io_data contains integer values, which ar valid io_data.
-        # IO.iodata_to_binary([34]) == "\""
-        # Because EExHTML.Safe makes use of String.Chars it is not possible to know how `[34]` should be printed.
-        # "34" or "\"", for this reason we can't use iodata encoding.
-        # json = Jason.encode_to_iodata!(variables)
-
-        key_string =
-          variables
-          |> Map.keys()
-          |> Enum.map(&Atom.to_string/1)
-          |> Enum.join(", ")
-
-        ~E"""
-        <div style='display:none;'><%= json %></div>
-        <script>const{<%= key_string %>}=JSON.parse(document.currentScript.previousElementSibling.textContent)</script>
-        """
-      end
-
-    {:error, :nofile} ->
-      def javascript_variables(_variables) do
-        raise "`javascript_variables/1` requires the Jason encoder, add `{:jason, \"~> 1.0.0\"}` to `mix.exs`"
-      end
-  end
 end
